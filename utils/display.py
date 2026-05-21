@@ -1,11 +1,15 @@
-def print_header(title):
-    # Prints a clean divider with title
-    pass
-
 def print_result(label, value):
     # Prints label: value in consistent format
-    pass
+    print(f"    {label:<15}: {value}")
 
 def print_separator():
     # Prints a line divider
-    pass
+    print("═" * 50)
+
+def print_header(title):
+    # Prints a clean divider with title
+    print_separator()
+    print(f"  {title}")
+    print_separator()
+
+
