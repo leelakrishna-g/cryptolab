@@ -1,5 +1,5 @@
 from utils.display import print_result, print_separator, print_header
-
+from modules.hashing import hashing_lab
 def main():
     print_header("CRYPTOLAB TERMINAL")
     is_running = True
@@ -16,7 +16,7 @@ def main():
         choice = input("  Enter your choice: ")
 
         if choice == "1":
-            pass  # call hashing module here
+            hashing_lab()
         elif choice == "0":
             is_running = False
             print("\n  Goodbye. Stay secure.")
