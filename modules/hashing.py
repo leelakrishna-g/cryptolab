@@ -87,7 +87,22 @@ def hash_generator():
 # ─────────────────────────────────────────────────────
 
 def algorithm_comparator():
-    pass
+    print_header("ALGORITHM COMPARATOR")
+    
+    text = input("  Enter text to compare: ")
+
+    md5 = ["MD5", "128", hashlib.md5(text.encode()).hexdigest()]
+    sha1 =  ["SHA-1", "160", hashlib.sha1(text.encode()).hexdigest()]
+    sha256 = ["SHA-256", "256", hashlib.sha256(text.encode()).hexdigest()]
+    sha512 = ["SHA-512", "512", hashlib.sha512(text.encode()).hexdigest()]
+    hashalgo = [md5, sha1, sha256, sha512]
+
+    for result in hashalgo:
+        algoinfo = f"{result[0]:<8} ({result[1]} bits)"
+        print_result(algoinfo,result[2])
+
+
+    print_separator()
 
 
 # ─────────────────────────────────────────────────────
