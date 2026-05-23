@@ -179,4 +179,32 @@ def file_integrity_checker():
 # ─────────────────────────────────────────────────────
 
 def collision_explainer():
-    pass
+    print_header("Collision Resistance Explainer")
+
+    print("\n  WHAT IS A HASH COLLISION?")
+    print("\n  A collision is when two different inputs produce the same hash output.")
+    
+    print("\n  WHY MD5 IS BROKEN:")
+    print("\n  MD5 is broken — real collisions have been found")
+    
+    print("\n  WHY SHA-256 IS SAFE:")
+    print("\n  SHA-256 has never had a proven collision")
+
+    print("\n  ALGORITHM COMPARISON:")
+    print("\n  Longer bits = stronger = harder to collide")
+    print_result("MD5", "Broken — collisions found")
+    print_result("SHA-1", "Deprecated — collisions demonstrated ")
+    print_result("SHA-256", "Safe — no collision found")
+    print_result("SHA-512", "Safe — strongest available")
+
+    print("\n  REAL WORLD IMPACT:")
+    realworldapplications = (
+    "\n  If two files produce the same hash, an attacker can substitute"
+    "\n  one for the other without detection. This breaks digital"
+    "\n  signatures, file verification, and password storage."
+    )
+    print(realworldapplications)
+    input("\n  Press Enter to continue...")
+
+    print_separator()
+    
