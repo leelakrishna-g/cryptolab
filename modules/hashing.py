@@ -15,6 +15,7 @@ def hashing_lab():
         print("  3. Avalanche Effect Demo")
         print("  4. File Integrity Checker")
         print("  5. Collision Resistance Explainer")
+        
         print("  0. Back to Main Menu")
         print_separator()
 
@@ -92,7 +93,7 @@ def algorithm_comparator():
     text = input("  Enter text to compare: ")
 
     md5 = ["MD5", "128", hashlib.md5(text.encode()).hexdigest()]
-    sha1 =  ["SHA-1", "160", hashlib.sha1(text.encode()).hexdigest()]
+    sha1 = ["SHA-1", "160", hashlib.sha1(text.encode()).hexdigest()]
     sha256 = ["SHA-256", "256", hashlib.sha256(text.encode()).hexdigest()]
     sha512 = ["SHA-512", "512", hashlib.sha512(text.encode()).hexdigest()]
     hashalgo = [md5, sha1, sha256, sha512]
@@ -110,18 +111,19 @@ def algorithm_comparator():
 # ─────────────────────────────────────────────────────
 
 def avalanche_effect():
-    print_header("Avalanche Effect")
+    print_header("AVALANCHE EFFECT DEMO")
     print("\n  The Avalanche Effect: even a tiny change in input")
     print("  produces a completely different hash output.")
     print("  Enter two similar inputs below to witness this.\n")
-    user_input1  = input("Enter the Input1: ")
-    user_input2 = input("Enter the Input2: ")
+    user_input1 = input("  Enter Input 1: ")
+    user_input2 = input("  Enter Input 2: ")
     print_result("Input1", user_input1)
-    print_result("Hash1", hashlib.sha256(user_input1 .encode()).hexdigest())
+    print_result("Hash1", hashlib.sha256(user_input1.encode()).hexdigest())
     print_result("Input2", user_input2)
     print_result("Hash2", hashlib.sha256(user_input2.encode()).hexdigest())
     print_separator()
-    print("  One character changed. Hash changed completely. This is the Avalanche Effect.")
+    print_result("Note", "One character changed. Hash changed completely.")
+    print_result("Concept", "This is the Avalanche Effect.")
 
     print_separator()
 
@@ -130,7 +132,7 @@ def avalanche_effect():
 # ─────────────────────────────────────────────────────
 
 def file_integrity_checker():
-    print_header("File Integrity Checker")
+    print_header("FILE INTEGRITY CHECKER")
     # Provide the input file here to check the integrity 
     file_path = input("  Enter file path: ")
 
@@ -140,8 +142,12 @@ def file_integrity_checker():
     sub_choice = input("  Your choice: ")
 
     # open the input file and generate the hash
-    with open(file_path, "rb") as file:
-        content = file.read()
+    try:
+        with open(file_path, "rb") as file:
+            content = file.read()
+    except FileNotFoundError:
+        print("\n  Error: File not found. Please check the path.")
+        return
     current_hash = hashlib.sha256(content).hexdigest()
 
     if sub_choice == "1":
@@ -155,8 +161,12 @@ def file_integrity_checker():
     elif sub_choice == "2":
         # Read the Stored Hash
         hashfilepath = file_path + ".hash"
-        with open(hashfilepath, "r") as file:
-            stored_hash = file.read()
+        try:
+            with open(hashfilepath, "r") as file:
+                stored_hash = file.read()
+        except FileNotFoundError:
+            print("\n  Error: No saved hash found. Please hash the file first (choice 1).")
+            return
 
         # Compare the Stored Hash with the Current Hash
         print_result("Stored Hash", stored_hash[:32] + "...")
@@ -165,21 +175,17 @@ def file_integrity_checker():
             print_result("Status", "✓ FILE INTEGRITY VERIFIED")
         else:
             print_result("Status", "✗ TAMPERED - HASHES DO NOT MATCH")
-        
 
     else:
         print("\n  Invalid choice. Please select 1 or 2.")
 
     print_separator()
-    
-
-
 # ─────────────────────────────────────────────────────
 # Feature 5 — Collision Resistance Explainer
 # ─────────────────────────────────────────────────────
 
 def collision_explainer():
-    print_header("Collision Resistance Explainer")
+    print_header("COLLISION RESISTANCE EXPLAINER")
 
     print("\n  WHAT IS A HASH COLLISION?")
     print("\n  A collision is when two different inputs produce the same hash output.")
@@ -193,18 +199,19 @@ def collision_explainer():
     print("\n  ALGORITHM COMPARISON:")
     print("\n  Longer bits = stronger = harder to collide")
     print_result("MD5", "Broken — collisions found")
-    print_result("SHA-1", "Deprecated — collisions demonstrated ")
+    print_result("SHA-1", "Deprecated — collisions demonstrated")
     print_result("SHA-256", "Safe — no collision found")
     print_result("SHA-512", "Safe — strongest available")
 
     print("\n  REAL WORLD IMPACT:")
     realworldapplications = (
-    "\n  If two files produce the same hash, an attacker can substitute"
-    "\n  one for the other without detection. This breaks digital"
-    "\n  signatures, file verification, and password storage."
+        "\n  If two files produce the same hash, an attacker can substitute"
+        "\n  one for the other without detection. This breaks digital"
+        "\n  signatures, file verification, and password storage."
     )
     print(realworldapplications)
+    print_separator()
     input("\n  Press Enter to continue...")
 
-    print_separator()
+    
     
