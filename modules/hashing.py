@@ -110,8 +110,20 @@ def algorithm_comparator():
 # ─────────────────────────────────────────────────────
 
 def avalanche_effect():
-    pass
+    print_header("Avalanche Effect")
+    print("\n  The Avalanche Effect: even a tiny change in input")
+    print("  produces a completely different hash output.")
+    print("  Enter two similar inputs below to witness this.\n")
+    user_input1  = input("Enter the Input1: ")
+    user_input2 = input("Enter the Input2: ")
+    print_result("Input1", user_input1)
+    print_result("Hash1", hashlib.sha256(user_input1 .encode()).hexdigest())
+    print_result("Input2", user_input2)
+    print_result("Hash2", hashlib.sha256(user_input2.encode()).hexdigest())
+    print_separator()
+    print("  One character changed. Hash changed completely. This is the Avalanche Effect.")
 
+    print_separator()
 
 # ─────────────────────────────────────────────────────
 # Feature 4 — File Integrity Checker
