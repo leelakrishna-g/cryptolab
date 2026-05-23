@@ -130,7 +130,48 @@ def avalanche_effect():
 # ─────────────────────────────────────────────────────
 
 def file_integrity_checker():
-    pass
+    print_header("File Integrity Checker")
+    # Provide the input file here to check the integrity 
+    file_path = input("  Enter file path: ")
+
+    print("\n  1. Hash a file and save")
+    print("  2. Verify a file against saved hash")
+    print_separator()
+    sub_choice = input("  Your choice: ")
+
+    # open the input file and generate the hash
+    with open(file_path, "rb") as file:
+        content = file.read()
+    current_hash = hashlib.sha256(content).hexdigest()
+
+    if sub_choice == "1":
+        #Save the hash for input file
+        hashfilepath = file_path + ".hash"
+        with open(hashfilepath,"w") as file:
+            file.write(current_hash)
+        print_result("Hash saved to", hashfilepath)
+        print_result("SHA-256 Hash", current_hash[:32] + "...")
+        
+    elif sub_choice == "2":
+        # Read the Stored Hash
+        hashfilepath = file_path + ".hash"
+        with open(hashfilepath, "r") as file:
+            stored_hash = file.read()
+
+        # Compare the Stored Hash with the Current Hash
+        print_result("Stored Hash", stored_hash[:32] + "...")
+        print_result("Current Hash", current_hash[:32] + "...")
+        if(stored_hash == current_hash):
+            print_result("Status", "✓ FILE INTEGRITY VERIFIED")
+        else:
+            print_result("Status", "✗ TAMPERED - HASHES DO NOT MATCH")
+        
+
+    else:
+        print("\n  Invalid choice. Please select 1 or 2.")
+
+    print_separator()
+    
 
 
 # ─────────────────────────────────────────────────────
