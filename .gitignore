@@ -219,3 +219,9 @@ __marimo__/
 
 # CryptoLab generated files
 *.hash
+
+# Generated keys and encrypted files
+*.key
+*.pem
+*.enc
+*.dec
