@@ -1,5 +1,9 @@
 import os
+import base64
+
 from utils.display import print_header, print_result, print_separator
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
 
 # ─────────────────────────────────────────────────────
 # Symmetric LAB - Main Menu
@@ -27,7 +31,9 @@ def symmetric_lab():
 
         if choice == "1":
             key_generator()
-        elif choice in ["2", "3", "4", "5", "6", "7", "8", "9"]:
+        elif choice == "2":
+            aes_cbc_encryption()
+        elif choice in ["3", "4", "5", "6", "7", "8", "9"]:
             print("\n  This module is coming soon. Stay tuned.")
         elif choice == "0":
             is_running = False
@@ -66,5 +72,71 @@ def key_generator():
     else:
         print("\n  Invalid choice. Try again.")
 
+    print_separator() 
+
+# ─────────────────────────────────────────────────────
+# Feature 2 — AES - CBC Encryption
+# ─────────────────────────────────────────────────────
+def aes_cbc_encryption():
+    print_header("AES CBC ENCRYPTION")
+    plain_text = input("  Enter text to encrypt: ")
+
+    print("  1. 128 bits")
+    print("  2. 192 bits")
+    print("  3. 256 bits")
+    print("  0. Back to Main Menu")
     print_separator()
 
+    key_choice = input("  Select key size: ")
+    key_options = {
+        "1": 128,
+        "2": 192,
+        "3": 256
+    }
+
+    # Load key from file
+    if key_choice in key_options:
+        key_bits = key_options[key_choice]
+        try:
+            with open(f"output/keys/symmetric_key_{key_bits}.key", "rb") as f:
+                key = f.read()
+
+        except FileNotFoundError:
+            print(f"\n  Key not found. Please generate a {key_bits}-bit key first.")
+            return
+        # Generate IV 
+        iv = os.urandom(16)
+        iv_path = "output/keys/iv_key.key"
+        with open(iv_path, "wb") as f:
+            f.write(iv)
+
+        # Create the padding object
+        padder = padding.PKCS7(128).padder()
+        # Actually Pad the plain text
+        padded_text = padder.update(plain_text.encode()) + padder.finalize()
+
+        # Create the cipher engine
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+        # Get encryptor from cipher. cipher object can do both encrypt and decrypt
+        encryptor = cipher.encryptor()
+
+        # Encrypt
+        cipher_text = encryptor.update(padded_text) + encryptor.finalize()
+
+        # Base64 encode output 
+        cipher_text_b64 = base64.b64encode(cipher_text).decode()
+
+        # Display result 
+        print_result("Original Text", plain_text)
+        print_result("Encrypted (B64)", cipher_text_b64)
+        print_result("IV (Hex)", iv.hex())
+        print_result("Key Size", f"{key_bits} bits")
+        print_result("Saved to", iv_path)
+
+    elif key_choice == "0":
+        return
+    else:
+        print("\n  Invalid choice. Try again.")
+        return
+    print_separator()
+    print("\n  Note: Use IV and same key size in Feature 3 to decrypt.")
