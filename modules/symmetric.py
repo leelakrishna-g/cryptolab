@@ -18,7 +18,7 @@ def symmetric_lab():
         print("  2. AES Encrypt (CBC Mode)")
         print("  3. AES Decrypt (CBC Mode)")
         print("  4. ECB Mode Vs CBC Comparision")
-        print("  5. AES Modes Explorer (ECB, CBC, CTR, GCM)")
+        print("  5. CTR Mode Explorer")
         print("  6. File Encryption & Decryption")
         print("  7. CMAC Generation & Verification")
         print("  8. HMAC Generation & Verification")
@@ -35,7 +35,9 @@ def symmetric_lab():
             aes_cbc_encryption()
         elif choice == "3":
             aes_cbc_decryption()
-        elif choice in ["4", "5", "6", "7", "8", "9"]:
+        elif choice == "4":
+            aes_ecb_cbc_comparison()
+        elif choice in ["5", "6", "7", "8", "9"]:
             print("\n  This module is coming soon. Stay tuned.")
         elif choice == "0":
             is_running = False
@@ -232,3 +234,147 @@ def aes_cbc_decryption():
         return
 
     print_separator()
+
+# ─────────────────────────────────────────────────────
+# Feature 4 — ECB vs CBC Comparison
+# ─────────────────────────────────────────────────────
+# ECB (Electronic Codebook):
+#   - No IV — each block encrypted independently
+#   - Same input block = same output block always
+#   - Patterns visible in ciphertext — cryptographically weak
+#   - Deprecated — never use for sensitive data
+#
+# CBC (Cipher Block Chaining):
+#   - Uses IV — each block XORed with previous ciphertext block
+#   - Same input produces different output every time
+#   - No patterns visible — cryptographically strong
+#   - Industry standard for symmetric encryption
+#
+# This feature demonstrates the difference visually:
+# Part 1 — user text encrypted with both modes side by side
+# Part 2 — repeating blocks prove ECB weakness definitively
+# ─────────────────────────────────────────────────────
+def aes_ecb_cbc_comparison():
+    print_header("AES ECB VS CBC COMPARISON")
+
+    # PART 1 — Side by side with user input
+    print("\n  PART 1 — SIDE BY SIDE ENCRYPTION")
+
+    plain_text = input("  Enter text to encrypt: ")
+    print("  1. 128 bits")
+    print("  2. 192 bits")
+    print("  3. 256 bits")
+    print("  0. Back to Main Menu")
+
+    key_choice = input("  Select key size: ")
+    key_options = {
+        "1": 128,
+        "2": 192,
+        "3": 256
+    }
+
+    # Load key from file
+    if key_choice in key_options:
+        key_bits = key_options[key_choice]
+        try:
+            with open(f"output/keys/symmetric_key_{key_bits}.key", "rb") as f:
+                key = f.read()
+
+        except FileNotFoundError:
+            print(f"\n  Key not found. Please generate a {key_bits}-bit key first.")
+            return
+        # Generate IV 
+        iv = os.urandom(16)
+        iv_path = "output/keys/iv_key.key"
+        with open(iv_path, "wb") as f:
+            f.write(iv)
+
+        # Create the padding object
+        padder = padding.PKCS7(128).padder()
+        # Actually Pad the plain text
+        padded_text = padder.update(plain_text.encode()) + padder.finalize()
+
+        # Create the cipher engine for CBC
+        cipher_cbc = Cipher(algorithms.AES(key), modes.CBC(iv))
+        # Get encryptor from cipher. cipher object can do both encrypt and decrypt
+        encryptor_cbc  = cipher_cbc.encryptor()
+
+        # Encrypt
+        cipher_text_cbc  = encryptor_cbc.update(padded_text) + encryptor_cbc.finalize()
+
+        # Base64 encode output 
+        cipher_text_cbc_b64  = base64.b64encode(cipher_text_cbc).decode()
+
+        # Create the cipher engine for ecb
+        cipher_ecb = Cipher(algorithms.AES(key), modes.ECB())
+        # Get encryptor from cipher. cipher object can do both encrypt and decrypt
+        encryptor_ecb  = cipher_ecb.encryptor()
+
+        # Encrypt
+        cipher_text_ecb = encryptor_ecb.update(padded_text) + encryptor_ecb.finalize()
+
+        # Base64 encode output 
+        cipher_text_ecb_b64 = base64.b64encode(cipher_text_ecb).decode()
+        print_result("Plain Text", plain_text)
+        print_result("CBC Encrypted", cipher_text_cbc_b64)
+        print_result("ECB Encrypted", cipher_text_ecb_b64)
+
+        print_separator()
+
+        # PART 2 — Pattern Demonstration
+        # Uses hardcoded repeating 16-byte blocks ("A" * 64)
+        # ECB encrypts identical blocks → identical ciphertext (pattern visible)
+        # CBC chains blocks with IV → every block different (no pattern)
+        # Fresh IV generated for Part 2 to ensure independence from Part 1
+
+        print("\n  PART 2 — PATTERN DEMONSTRATION")
+        # Use exactly repeating 16-byte blocks
+        plain_text = "AAAAAAAAAAAAAAAA" * 3
+        print("  Input: 3 identical 16-byte blocks of 'A'")
+        print_result("Plain Text", plain_text)
+        print_separator()
+
+        padder = padding.PKCS7(128).padder()
+        padded_text = padder.update(plain_text.encode()) + padder.finalize()
+
+        iv2 = os.urandom(16)
+        cipher_cbc2 = Cipher(algorithms.AES(key), modes.CBC(iv2))
+        cipher_ecb2 = Cipher(algorithms.AES(key), modes.ECB())
+
+        encryptor_cbc2  = cipher_cbc2.encryptor()
+        cipher_text_cbc2  = encryptor_cbc2.update(padded_text) + encryptor_cbc2.finalize()
+        encryptor_ecb2  = cipher_ecb2.encryptor()
+        cipher_text_ecb2 = encryptor_ecb2.update(padded_text) + encryptor_ecb2.finalize()
+
+        # Split raw cipher bytes into 16-byte blocks
+        blocks_cbc = [cipher_text_cbc2[i:i+16] for i in range(0, len(cipher_text_cbc2), 16)]
+        print("\n  CBC Blocks:")
+        for i, block in enumerate(blocks_cbc):
+            print_result(f"CBC Block {i+1}", block.hex())
+
+        blocks_ecb = [cipher_text_ecb2[i:i+16] for i in range(0, len(cipher_text_ecb2), 16)]
+        print("\n  ECB Blocks:")
+        for i, block in enumerate(blocks_ecb):
+            if i == 0:
+                suffix = " ← REFERENCE BLOCK"
+            elif block.hex() == blocks_ecb[0].hex():
+                suffix = " ← IDENTICAL"
+            else:
+                suffix = " ← DIFFERENT (padding block)"
+            print_result(f"ECB Block {i+1}", block.hex() + suffix)
+
+        print_separator()
+
+        # OBSERVATION
+        print("\n  OBSERVATION:")
+        print("  ECB — identical blocks = identical ciphertext (WEAK)")
+        print("  CBC — chaining makes every block unique (STRONG)")
+        print("  Never use ECB for sensitive data in production.")
+
+        input("\n  Press Enter to continue...")
+        print_separator()
+    elif key_choice == "0":
+        return
+    else:
+        print("\n  Invalid choice. Try again.")
+        return
