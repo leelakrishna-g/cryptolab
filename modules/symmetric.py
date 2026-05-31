@@ -37,7 +37,9 @@ def symmetric_lab():
             aes_cbc_decryption()
         elif choice == "4":
             aes_ecb_cbc_comparison()
-        elif choice in ["5", "6", "7", "8", "9"]:
+        elif choice == "5":
+            aes_ctrmode_explorer()
+        elif choice in ["6", "7", "8", "9"]:
             print("\n  This module is coming soon. Stay tuned.")
         elif choice == "0":
             is_running = False
@@ -378,3 +380,239 @@ def aes_ecb_cbc_comparison():
     else:
         print("\n  Invalid choice. Try again.")
         return
+
+# ─────────────────────────────────────────────────────
+# Feature 5 — AES CTR Mode Explorer
+# ─────────────────────────────────────────────────────
+# CTR (Counter Mode) — Key Concepts:
+#   - Converts AES block cipher into a stream cipher
+#   - AES encrypts Nonce + Counter to generate keystream
+#   - Plaintext XOR Keystream = Ciphertext
+#   - No padding required — works on any length input
+#   - Same operation for both encrypt and decrypt
+#   - Supports parallel processing — faster than CBC
+#   - Nonce must be unique per encryption with same key
+#   - Nonce reuse with same key = catastrophic security failure
+#
+# Key difference from CBC:
+#   - CBC encrypts plaintext directly with chaining
+#   - CTR never encrypts plaintext — encrypts counter blocks
+#   - CTR has no error propagation across blocks
+# ─────────────────────────────────────────────────────
+# ctr_encrypt():
+# CTR Encryption Flow:
+# 1. Take plain text input
+# 2. Load AES key from file
+# 3. Generate random 16-byte nonce
+#    - Nonce saved to output/keys/ctr_nonce.key
+#    - Never reuse nonce with same key
+# 4. Create AES-CTR cipher (key + nonce)
+# 5. Encrypt — no padding needed
+#    - CTR generates keystream from nonce + counter
+#    - XOR keystream with plaintext = ciphertext
+# 6. Base64 encode → display readable output
+
+# ctr_decrypt():
+# CTR Decryption Flow (identical operation to encryption):
+# 1. Take Base64 ciphertext input
+# 2. Load same AES key used during encryption
+# 3. Load saved nonce from file
+#    - Must be exact same nonce used during encryption
+# 4. Create AES-CTR cipher (same key + same nonce)
+# 5. Decrypt — XOR keystream with ciphertext = plaintext
+#    - Same operation as encryption due to XOR symmetry
+# 6. Decode bytes to string and display
+# ─────────────────────────────────────────────────────
+def aes_ctrmode_explorer():
+    print_header("AES CTR MODE EXPLORER")
+
+    print("  1. 128 bits")
+    print("  2. 192 bits")
+    print("  3. 256 bits")
+    print("  0. Back to Main Menu")
+    print_separator()
+
+    key_choice = input("  Select key size: ")
+    key_options = {
+        "1": 128,
+        "2": 192,
+        "3": 256
+    }
+
+    # Load key from file
+    if key_choice in key_options:
+        key_bits = key_options[key_choice]
+        try:
+            with open(f"output/keys/symmetric_key_{key_bits}.key", "rb") as f:
+                key = f.read()
+
+        except FileNotFoundError:
+            print(f"\n  Key not found. Please generate a {key_bits}-bit key first.")
+            return
+        
+        print_result("Key Loaded", f"AES-{key_bits} ({key_bits} bits)")
+        
+        print("\n  1. Encrypt")
+        print("  2. Decrypt")
+        print("  3. CTR Mode Information")
+        print("  0. Back")
+        print_separator()
+        operation = input("  Select operation: ")
+            
+        if operation == "1":
+            ctr_encrypt(key)
+        elif operation == "2":
+            ctr_decrypt(key)
+        elif operation == "3":
+            ctr_mode_information()
+        else:
+            print("\n  Invalid operation.")
+
+    elif key_choice == "0":
+        return
+    else:
+        print("\n  Invalid choice. Try again.")
+        return
+ 
+def ctr_encrypt(key):
+    plain_text = input("  Enter text to encrypt: ")
+    
+    # Generate nonce
+    nonce = os.urandom(16)
+    nonce_path = "output/keys/ctr_nonce.key" 
+    with open(nonce_path, "wb") as f:
+        f.write(nonce)
+    print_result("Saved to", nonce_path)
+    print_separator()
+            
+    # Create the cipher engine
+    cipher = Cipher(algorithms.AES(key), modes.CTR(nonce))
+    # Get encryptor from cipher. cipher object can do both encrypt and decrypt
+    encryptor = cipher.encryptor()
+
+    # Encrypt
+    cipher_text = encryptor.update(plain_text.encode()) + encryptor.finalize()
+    
+    # Base64 encode output 
+    cipher_text_b64 = base64.b64encode(cipher_text).decode()
+    # Display result 
+    print_result("Original Text", plain_text)
+    print_result("Nonce (Hex)", nonce.hex())
+    print_result("Nonce Length", f"{len(nonce)} bytes")
+    print_result("Key Length", f"{len(key)} bytes")
+    print_result("Encrypted (B64)", cipher_text_b64)
+    print_separator() 
+    print("\n  Note: Use same key size in Decrypt to recover plaintext.")  
+
+def ctr_decrypt(key):
+    cipher_text_b64 = input("  Enter cipher text (Base64) to decrypt: ")
+    try:
+        cipher_text = base64.b64decode(cipher_text_b64)
+    except Exception:
+        print("\n  Invalid Base64 ciphertext.")
+        return
+    # Load nonce
+    nonce_path = "output/keys/ctr_nonce.key" 
+    try:
+        with open(nonce_path, "rb") as f:
+            nonce = f.read()
+    except FileNotFoundError:
+        print("\n  Nonce not found. Please encrypt a message first (Feature 5 → Encrypt).")
+        return
+
+    # Create the cipher engine
+    cipher = Cipher(algorithms.AES(key), modes.CTR(nonce))
+    # Get decryptor from cipher. cipher object can do both encrypt and decrypt
+    decryptor = cipher.decryptor()
+    
+    # Decrypt the cipher text
+    plain_text = decryptor.update(cipher_text) + decryptor.finalize() 
+    try:
+        decrypted_text = plain_text.decode()
+    except UnicodeDecodeError:
+        print("\n  Decryption failed or produced invalid text.")
+        return
+    # Display result 
+    print_result("Input Cipher Text", cipher_text_b64)
+    print_result("Nonce (Hex)", nonce.hex())
+    print_result("Nonce Length", f"{len(nonce)} bytes")
+    print_result("Key Length", f"{len(key)} bytes")
+    print_result("Decrypted Text", decrypted_text)
+    print_separator()
+
+def ctr_mode_information():
+
+    print_header("CTR MODE INFORMATION")
+
+    print_result(
+        "Overview",
+        "CTR converts AES into a stream cipher"
+    )
+
+    print_result(
+        "AES Input",
+        "Nonce + Counter"
+    )
+
+    print_result(
+        "Padding",
+        "Not Required"
+    )
+
+    print_result(
+        "Encryption",
+        "Plaintext XOR Keystream"
+    )
+
+    print_result(
+        "Decryption",
+        "Ciphertext XOR Same Keystream"
+    )
+
+    print_result(
+        "AES Operation",
+        "AES Encrypt used for both Encrypt and Decrypt"
+    )
+
+    print_result(
+        "Parallel Processing",
+        "Encryption and Decryption Supported"
+    )
+
+    print_result(
+        "Random Access",
+        "Supported"
+    )
+
+    print_result(
+        "Error Propagation",
+        "Limited to Modified Block/Bits"
+    )
+
+    print_result(
+        "Security Rule",
+        "Never Reuse Same Key + Nonce"
+    )
+
+    print_separator()
+
+    print("\n  CTR Flow:")
+    print("""
+    Nonce || Counter
+            │
+            ▼
+       AES Encrypt
+            │
+            ▼
+        Keystream
+            │
+            ▼
+    Plaintext XOR Keystream
+            │
+            ▼
+        Ciphertext
+    """)
+
+    print_separator()
+
+    input("\n  Press Enter to continue...")
