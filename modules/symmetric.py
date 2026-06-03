@@ -4,6 +4,8 @@ import base64
 from utils.display import print_header, print_result, print_separator
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.exceptions import InvalidTag
 
 # ─────────────────────────────────────────────────────
 # Symmetric LAB - Main Menu
@@ -39,7 +41,9 @@ def symmetric_lab():
             aes_ecb_cbc_comparison()
         elif choice == "5":
             aes_ctrmode_explorer()
-        elif choice in ["6", "7", "8", "9"]:
+        elif choice == "9":
+            aes_gcmmode_explorer()
+        elif choice in ["6", "7", "8"]:
             print("\n  This module is coming soon. Stay tuned.")
         elif choice == "0":
             is_running = False
@@ -615,4 +619,330 @@ def ctr_mode_information():
 
     print_separator()
 
+    input("\n  Press Enter to continue...")
+
+# ─────────────────────────────────────────────────────
+# Feature 9 — AES GCM Mode Explorer
+# ─────────────────────────────────────────────────────
+# GCM (Galois/Counter Mode) — Key Concepts:
+#   - Authenticated Encryption with Associated Data (AEAD)
+#   - Combines AES-CTR encryption with GMAC authentication
+#   - Provides both confidentiality AND integrity
+#   - Produces ciphertext + authentication tag
+#   - Auth tag verifies data was not tampered with
+#   - 12-byte nonce (96 bits) — recommended for GCM
+#   - No padding required — stream cipher behaviour
+#   - AAD — optional data authenticated but not encrypted
+#   - InvalidTag raised if any part of payload is modified
+#   - Nonce prepended to payload for single-blob transmission
+#
+# Key advantage over CBC:
+#   - CBC encrypts only — tampering goes undetected
+#   - GCM encrypts + authenticates — tampering detected immediately
+#   - Modern standard — used in TLS 1.3, HTTPS, VPNs
+# ─────────────────────────────────────────────────────
+
+# gcm_encrypt():
+# GCM Encryption Flow:
+# 1. Take plaintext input
+# 2. Take optional AAD input (authenticated but not encrypted)
+# 3. Load AES key from file
+# 4. Generate random 12-byte nonce
+#    - 12 bytes is GCM standard (not 16 like CBC/CTR)
+# 5. Encrypt using AESGCM
+#    - Library handles CTR encryption + GMAC tag generation
+#    - Auth tag automatically appended to ciphertext
+# 6. Prepend nonce to payload → single transmission blob
+#    - payload = nonce (12 bytes) + ciphertext + tag (16 bytes)
+# 7. Base64 encode → display single readable string
+
+# gcm_decrypt():
+# GCM Decryption Flow:
+# 1. Take Base64 payload input
+# 2. Validate minimum payload length (29 bytes)
+#    - 12 (nonce) + 16 (tag) + 1 (minimum ciphertext) = 29
+# 3. Take same AAD used during encryption
+# 4. Extract nonce from first 12 bytes of payload
+# 5. Extract ciphertext+tag from remaining bytes
+# 6. Decrypt using AESGCM
+#    - Library verifies auth tag FIRST
+#    - If tag invalid → raises InvalidTag → reject data
+#    - If tag valid → CTR decryption proceeds
+# 7. Display original plaintext
+# ─────────────────────────────────────────────────────
+def aes_gcmmode_explorer():
+    print_header("AES GCM MODE EXPLORER")
+
+    print("  1. 128 bits")
+    print("  2. 192 bits")
+    print("  3. 256 bits")
+    print("  0. Back to Main Menu")
+    print_separator()
+
+    key_choice = input("  Select key size: ")
+    key_options = {
+        "1": 128,
+        "2": 192,
+        "3": 256
+    }
+
+    # Load key from file
+    if key_choice in key_options:
+        key_bits = key_options[key_choice]
+        try:
+            with open(f"output/keys/symmetric_key_{key_bits}.key", "rb") as f:
+                key = f.read()
+
+        except FileNotFoundError:
+            print(f"\n  Key not found. Please generate a {key_bits}-bit key first.")
+            return
+        
+        print_result("Key Loaded", f"AES-{key_bits} ({key_bits} bits)")
+        
+        print("\n  1. Encrypt")
+        print("  2. Decrypt")
+        print("  3. GCM Mode Information")
+        print("  0. Back")
+        print_separator()
+        operation = input("  Select operation: ")
+            
+        if operation == "1":
+            gcm_encrypt(key)
+        elif operation == "2":
+            gcm_decrypt(key)
+        elif operation == "3":
+            gcm_mode_information()
+        else:
+            print("\n  Invalid operation.")
+
+    elif key_choice == "0":
+        return
+    else:
+        print("\n  Invalid choice. Try again.")
+        return
+ 
+def gcm_encrypt(key):
+    #Enter Plaintext
+    plain_text = input("  Enter text to encrypt: ")
+    
+    #Enter AAD (optional)
+    aad = input("  Enter AAD (Associated Data - optional, press Enter to skip): ")
+
+    if(len(aad) ==0):
+        aad = None
+    else:
+        aad = aad.encode()
+
+    #Generate 12-byte nonce
+    nonce = os.urandom(12)
+    
+    #Encrypt using AESGCM
+    aesgcm = AESGCM(key)
+    cipher_text = aesgcm.encrypt(nonce, plain_text.encode(), aad)
+
+    #Combined payload 
+    payload = nonce + cipher_text
+    payload_b64 = base64.b64encode(payload).decode()
+
+    #Display outputs
+    print_result("Original Text", plain_text)
+    print_result("Algorithm", f"AES-{len(key)*8}-GCM")
+    print_result("Nonce (Hex)", nonce.hex())
+    print_result("Nonce Length", f"{len(nonce)} bytes")
+    print_result("AAD", aad.decode() if aad else "None")
+    print_result("Auth Tag Size", "16 bytes")
+    print_result("Payload Length", f"{len(payload)} bytes")
+    print_result("Encrypted Payload (B64)", payload_b64)
+    print_separator()
+    print("\n  Note: Copy the Encrypted Payload (B64) for decryption.")
+    print("  Use same key size and AAD in Decrypt.")
+
+def gcm_decrypt(key):
+    #Enter Encrypted payload
+    payload_b64 = input("  Enter Encrypted Payload(B64) to decrypt: ")
+
+    # Decode Base64 payload
+    try:
+        payload = base64.b64decode(payload_b64)
+    except Exception:
+        print("\n  Invalid Base64 payload.")
+        return
+
+    if len(payload) < 29:
+        print("\n  Invalid GCM payload.")
+        return
+    
+    #Enter AAD (optional)
+    aad = input("  Enter same AAD (or press Enter if none used): ")
+
+    if(len(aad) ==0):
+        aad = None
+    else:
+        aad = aad.encode()
+
+    #Fetch nonce and cipher text from input payload
+    nonce = payload[:12]
+    ciphertext_with_tag  = payload[12:]
+    ciphertext_length = len(ciphertext_with_tag) - 16
+    tag = ciphertext_with_tag [-16:]
+    
+    #Decrypt using AESGCM
+    aesgcm = AESGCM(key)
+
+    try:
+        original_text = aesgcm.decrypt(
+            nonce,
+            ciphertext_with_tag,
+            aad
+        )
+    except InvalidTag:
+        print("\n  Authentication Failed!")
+        print("  Ciphertext, AAD, Tag, or Key may have been modified.")
+        return
+
+    #Display outputs
+    print_result("Input Encrypted Payload (B64)", payload_b64)
+    print_result("Payload Length", f"{len(payload)} bytes")
+    print_result("Algorithm", f"AES-{len(key)*8}-GCM")
+    print_result("Ciphertext Length", f"{ciphertext_length} bytes")
+    print_result("Nonce (Hex)", nonce.hex())
+    print_result("Nonce Length", f"{len(nonce)} bytes")
+    print_result("AAD", aad.decode() if aad else "None")
+    print_result("Auth Tag (Hex)", tag.hex())
+    print_result("Auth Tag Size", "16 bytes")
+    print_result("Original Text", original_text.decode())
+    print_separator()
+
+def gcm_mode_information():
+    print_separator()
+    print_header("AES GCM MODE INFORMATION")
+
+    print_result(
+        "Overview",
+        "Authenticated encryption providing confidentiality and integrity"
+    )
+
+    print_result(
+        "Algorithm",
+        "AES-CTR encryption + GMAC/GHASH authentication"
+    )
+
+    print_result(
+        "Nonce Size",
+        "12 bytes (96 bits) recommended"
+    )
+
+    print_result(
+        "Auth Tag Size",
+        "16 bytes (128 bits) default"
+    )
+
+    print_result(
+        "AAD",
+        "Optional authenticated but unencrypted data"
+    )
+
+    print_result(
+        "Padding",
+        "Not Required"
+    )
+
+    print_result(
+        "Auth Verification",
+        "Authentication tag verified before plaintext is accepted"
+    )
+
+    print_result(
+        "Tamper Detection",
+        "Any modification causes InvalidTag exception"
+    )
+
+    print_result(
+        "Real World Use",
+        "TLS 1.3, HTTPS, VPNs, Cloud Storage, Secure APIs"
+    )
+
+    print_result(
+        "Security Rule",
+        "Never reuse the same nonce with the same key"
+    )
+
+    print_separator()
+
+    print("\n  GCM vs CBC:")
+
+    print_result(
+        "CBC",
+        "Encryption only - no authentication"
+    )
+
+    print_result(
+        "GCM",
+        "Encryption + Authentication combined"
+    )
+
+    print_result(
+        "CBC Tamper",
+        "Modified data may decrypt to garbage"
+    )
+
+    print_result(
+        "GCM Tamper",
+        "Raises InvalidTag and rejects data"
+    )
+
+    print_result(
+        "Modern Use",
+        "GCM preferred for new secure systems"
+    )
+
+    print_separator()
+
+    print("\n  GCM Encryption Flow:")
+
+    print("""
+    Plaintext + Nonce + Key + AAD
+            │
+            ▼
+    ┌─────────────────────┐
+    │   AES-CTR Engine    │
+    │   Encrypts          │
+    │   Plaintext         │
+    └─────────────────────┘
+            │
+            ▼
+    ┌─────────────────────┐
+    │   GMAC/GHASH Engine │
+    │   Authenticates     │
+    │ Ciphertext + AAD    │
+    └─────────────────────┘
+            │
+            ▼
+    Ciphertext + Auth Tag (combined)
+
+    ──────────────────────────────────
+
+    GCM Decryption Flow:
+
+    Payload + Nonce + Key + AAD
+            │
+            ▼
+    ┌─────────────────────┐
+    │ Verify Auth Tag     │
+    │ FIRST               │
+    │ InvalidTag → STOP   │
+    └─────────────────────┘
+            │
+            ▼ (Tag Valid)
+    ┌─────────────────────┐
+    │   AES-CTR Engine    │
+    │   Decrypts          │
+    │   Ciphertext        │
+    └─────────────────────┘
+            │
+            ▼
+    Original Plaintext
+    """)
+
+    print_separator()
     input("\n  Press Enter to continue...")
